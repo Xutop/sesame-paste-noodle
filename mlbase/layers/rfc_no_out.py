@@ -12,9 +12,9 @@ __all__ = [
 @layerhelper
 class R_fullConn(Layer):
 
-    debugname = 'RNN Full Connection'
-    LayerTypeName = 'R_fullConn'
-    yaml_tag = u'!R_fullConn'
+    debugname = 'Rfc_no_out'
+    LayerTypeName = 'Rfc_no_out'
+    yaml_tag = u'!Rfc_no_out'
     
     def __init__(self,
                  output=None,
@@ -65,7 +65,8 @@ class R_fullConn(Layer):
                                 sequences=inputimage,
                                 outputs_info=[self.h0, None],
                                 n_steps=inputimage.shape[0])
-        return (s[:,0,:],)
+        h00 = h[:,0,:][-1].dimshuffle('x', 0)
+        return (s[:,0,:],h00)
 
     def forwardSize(self, inputsize):
 

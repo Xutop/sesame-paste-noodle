@@ -12,9 +12,9 @@ __all__ = [
 @layerhelper
 class R_fullConn(Layer):
 
-    debugname = 'RNN Full Connection'
-    LayerTypeName = 'R_fullConn'
-    yaml_tag = u'!R_fullConn'
+    debugname = 'Rfc_no_in'
+    LayerTypeName = 'Rfc_no_in'
+    yaml_tag = u'!Rfc_no_in'
     
     def __init__(self,
                  output=None,
@@ -30,17 +30,14 @@ class R_fullConn(Layer):
         initbias = np.zeros((output_feature,))
         self.b = theano.shared(initbias, borrow=True)
         
-        initxw = weightIniter.initialize((input_feature, h_num))
+        initxw = np.zeros((input_feature, h_num))
         self.xw = theano.shared(initxw, borrow=True)
-        
+
         inithw = weightIniter.initialize((h_num, h_num))
         self.hw = theano.shared(inithw, borrow=True)
         
         inithb = np.zeros((h_num,))
         self.hb = theano.shared(inithb, borrow=True)
-        
-        inith0 = np.zeros((1, h_num))
-        self.h0 = theano.shared(inith0, borrow=True)
 
         self.inputFeature = input_feature
         self.h_number = h_num
@@ -50,11 +47,12 @@ class R_fullConn(Layer):
         self.output = -1
 
     def getpara(self):
-        return (self.w, self.b, self.xw, self.hw, self.hb)
+        return (self.w, self.b, self.hw, self.hb)
 
     def forward(self, inputtensor):
+        h00 = inputtensor[1]
         inputimage = inputtensor[0]
-        
+        #print(inputimage.shape[0]) 
         def recurrence(x_t, h_tm1):
             h_t = T.nnet.sigmoid(T.dot(x_t, self.xw)
                                  + T.dot(h_tm1, self.hw) + self.hb)
@@ -63,7 +61,7 @@ class R_fullConn(Layer):
 
         [h, s], _ = theano.scan(fn=recurrence,
                                 sequences=inputimage,
-                                outputs_info=[self.h0, None],
+                                outputs_info=[h00, None],
                                 n_steps=inputimage.shape[0])
         return (s[:,0,:],)
 
@@ -90,7 +88,6 @@ class R_fullConn(Layer):
         objDict['h_number'] = self.h_number
         objDict['w'] = self.w
         objDict['b'] = self.b
-        objDict['xw'] = self.xw
         objDict['hw'] = self.hw
         objDict['hb'] = self.hb
 
@@ -103,7 +100,6 @@ class R_fullConn(Layer):
         self.h_number = tmap['h_number']
         self.w = tmap['w']
         self.b = tmap['b']
-        self.xw = tmap['xw']
         self.hw = tmap['hw']
         self.hb = tmap['hb']
 
