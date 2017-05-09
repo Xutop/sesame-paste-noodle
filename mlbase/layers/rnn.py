@@ -6,28 +6,27 @@ import theano.tensor as T
 import mlbase.init as winit
 
 __all__ = [
-    'R_fullConn',
+    'RNN',
 ]
 
 @layerhelper
-class R_fullConn(Layer):
+class RNN(Layer):
 
-    debugname = 'RNN Full Connection'
-    LayerTypeName = 'R_fullConn'
-    yaml_tag = u'!R_fullConn'
+    debugname = 'rnn'
+    LayerTypeName = 'RNN'
+    yaml_tag = u'!RNN'
     
     def __init__(self,
-                 output=None,
                  input_feature=None,
                  h_num=None,
-                 output_feature=None):
-        super(R_fullConn, self).__init__()
+                 activation=T.nnet.sigmoid):
+        super(RNN, self).__init__()
 
         weightIniter = winit.XavierInit()
         
-        initweight = weightIniter.initialize((h_num, output_feature))
+        initweight = weightIniter.initialize((h_num, input_feature))
         self.w = theano.shared(initweight, borrow=True)
-        initbias = np.zeros((output_feature,))
+        initbias = np.zeros((input_feature,))
         self.b = theano.shared(initbias, borrow=True)
         
         initxw = weightIniter.initialize((input_feature, h_num))
@@ -44,10 +43,8 @@ class R_fullConn(Layer):
 
         self.inputFeature = input_feature
         self.h_number = h_num
-        self.outputFeature = output_feature
-        
-        self.times = -1
-        self.output = -1
+        self.outputFeature = input_feature
+        self.activation = activation
 
     def getpara(self):
         return (self.w, self.b, self.xw, self.hw, self.hb)
@@ -56,7 +53,7 @@ class R_fullConn(Layer):
         inputimage = inputtensor[0]
         
         def recurrence(x_t, h_tm1):
-            h_t = T.nnet.sigmoid(T.dot(x_t, self.xw)
+            h_t = self.activation(T.dot(x_t, self.xw)
                                  + T.dot(h_tm1, self.hw) + self.hb)
             s_t = (T.dot(h_t, self.w) + self.b)
             return [h_t, s_t]
@@ -84,7 +81,7 @@ class R_fullConn(Layer):
         return [(isize[0], self.outputFeature,)]
 
     def fillToObjMap(self):
-        objDict = super(R_fullConn, self).fillToObjMap()
+        objDict = super(RNN, self).fillToObjMap()
         objDict['inputFeature'] = self.inputFeature
         objDict['outputFeature'] = self.outputFeature
         objDict['h_number'] = self.h_number
@@ -93,11 +90,12 @@ class R_fullConn(Layer):
         objDict['xw'] = self.xw
         objDict['hw'] = self.hw
         objDict['hb'] = self.hb
+        objDict['activation'] = self.activation
 
         return objDict
 
     def loadFromObjMap(self, tmap):
-        super(R_fullConn, self).loadFromObjMap(tmap)
+        super(RNN, self).loadFromObjMap(tmap)
         self.inputFeature = tmap['inputFeature']
         self.outputFeature = tmap['outputFeature']
         self.h_number = tmap['h_number']
@@ -106,18 +104,19 @@ class R_fullConn(Layer):
         self.xw = tmap['xw']
         self.hw = tmap['hw']
         self.hb = tmap['hb']
+        self.activation = tmap['activation']
 
     @classmethod
     def to_yaml(cls, dumper, data):
         obj_dict = data.fillToObjMap()
-        node = dumper.represent_mapping(R_fullConn.yaml_tag, obj_dict)
+        node = dumper.represent_mapping(RNN.yaml_tag, obj_dict)
         return node
 
     @classmethod
     def from_yaml(cls, loader, node):
         obj_dict = loader.construct_mapping(node)
-        ret = R_fullConn(input_feature=obj_dict['inputFeature'],
-                         h_num=obj_dict['h_number'],
-                       output_feature=obj_dict['outputFeature'])
+        ret = RNN(input_feature=obj_dict['inputFeature'],
+                  h_num=obj_dict['h_number'],
+                  activation=obj_dict['activation'])
         ret.loadFromObjMap(obj_dict)
         return ret
